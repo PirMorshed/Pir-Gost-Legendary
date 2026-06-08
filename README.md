@@ -45,7 +45,19 @@ bash <(curl -sL https://raw.githubusercontent.com/PirMorshed/Pir-Gost-Legendary/
 
 ## ✨ Key FeaturesSmart
 
-Target Management: Save, manage, and switch between multiple destination IPs effortlessly without losing order. Quick-select pre-configured Cloudflare HTTP/HTTPS ports or enter custom port ranges.  11 Transport Protocols Supported: Deploy tunnels using advanced protocols including relay+mtls, relay+grpc, relay+quic, relay+wss, relay+mwss, and more.  Kernel & Network Optimizer: Automatically applies Linux kernel tuning for speed and low ping, including BBR activation, TCP Fast Open ($tcp\_fastopen=3$), and optimized UDP/TCP buffer sizes.  Multi-Instance Dashboard: Seamlessly create, edit, restart, view real-time logs, or perform a deep/root cleanup delete for multiple separate tunnel instances simultaneously.  Pir Sentry (Watchdog): Built-in automated cron-job monitoring system that performs health checks every minute and revives dead tunnel instances instantly.  Anti-DPI & Resource Friendly: Includes a Go-runtime memory optimization toggle (GOGC=20) to save RAM, and an optional 30-minute anti-DPI automated refresh system to bypass deep packet inspection blocks.  Nuclear Uninstaller: Cleanly wipes all instances, cron jobs, configurations, and core binaries with a single click.  
+Target Management: Save, manage, and switch between multiple destination IPs effortlessly without losing order. Quick-select pre-configured Cloudflare HTTP/HTTPS ports or enter custom port ranges.
+
+11 Transport Protocols Supported: Deploy tunnels using advanced protocols including relay+mtls, relay+grpc, relay+quic, relay+wss, relay+mwss, and more. 
+
+Kernel & Network Optimizer: Automatically applies Linux kernel tuning for speed and low ping, including BBR activation, TCP Fast Open ($tcp\_fastopen=3$), and optimized UDP/TCP buffer sizes. 
+
+Multi-Instance Dashboard: Seamlessly create, edit, restart, view real-time logs, or perform a deep/root cleanup delete for multiple separate tunnel instances simultaneously. 
+
+Pir Sentry (Watchdog): Built-in automated cron-job monitoring system that performs health checks every minute and revives dead tunnel instances instantly. 
+
+Anti-DPI & Resource Friendly: Includes a Go-runtime memory optimization toggle (GOGC=20) to save RAM, and an optional 30-minute anti-DPI automated refresh system to bypass deep packet inspection blocks.
+
+Nuclear Uninstaller: Cleanly wipes all instances, cron jobs, configurations, and core binaries with a single click.  
 
 ## 🛠 Advanced Feature TogglesWhen
 
