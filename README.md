@@ -57,4 +57,8 @@ UDP TTL Fix: Optimized packet routing tailored to fix high ping in online gaming
 
 
 ## Stargazers over time
+                        
+## Stargazers over time
+[![Stargazers over time](https://starchart.cc/PirMorshed/Pir-Gost-Legendary.svg?background=%23d0d0d0&axis=%23161616&line=%230c00f2)](https://starchart.cc/PirMorshed/Pir-Gost-Legendary)
 
+                    
