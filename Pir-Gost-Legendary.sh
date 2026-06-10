@@ -130,6 +130,19 @@ EOF
     else
         echo -e "${GREEN}[+] Optimization already exists.${NC}"
     fi
+
+    # --- NEW: LOG MANAGEMENT TO PREVENT DISK FULL ---
+    echo -e "${YELLOW}[*] Configuring log rotation to save disk space...${NC}"
+    if [ -f /etc/systemd/journald.conf ]; then
+        sed -i 's/#SystemMaxUse=/SystemMaxUse=100M/' /etc/systemd/journald.conf
+        sed -i 's/#RuntimeMaxUse=/RuntimeMaxUse=100M/' /etc/systemd/journald.conf
+        systemctl restart systemd-journald
+    fi
+    # پاکسازی فوری فایل‌های حجیم فعلی
+    journalctl --vacuum-size=100M > /dev/null 2>&1
+    truncate -s 0 /var/log/syslog > /dev/null 2>&1
+    truncate -s 0 /var/log/syslog.1 > /dev/null 2>&1
+    echo -e "${GREEN}[+] Log management applied (Max 100MB).${NC}"
 }
 
 # --- IP & PORT MANAGER ---
@@ -329,6 +342,9 @@ After=network.target
 [Service]
 Type=simple
 Environment=$M_GC
+# Silence logging to prevent disk full
+StandardOutput=null
+StandardError=null
 Restart=always
 RestartSec=5
 $( [[ "$R_TIME" != "0" ]] && echo "RuntimeMaxSec=$R_TIME" )
