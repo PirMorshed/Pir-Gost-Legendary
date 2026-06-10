@@ -131,14 +131,13 @@ EOF
         echo -e "${GREEN}[+] Optimization already exists.${NC}"
     fi
 
-    # --- NEW: LOG MANAGEMENT TO PREVENT DISK FULL ---
+    # --- LOG MANAGEMENT TO PREVENT DISK FULL ---
     echo -e "${YELLOW}[*] Configuring log rotation to save disk space...${NC}"
     if [ -f /etc/systemd/journald.conf ]; then
         sed -i 's/#SystemMaxUse=/SystemMaxUse=100M/' /etc/systemd/journald.conf
         sed -i 's/#RuntimeMaxUse=/RuntimeMaxUse=100M/' /etc/systemd/journald.conf
         systemctl restart systemd-journald
     fi
-    # پاکسازی فوری فایل‌های حجیم فعلی
     journalctl --vacuum-size=100M > /dev/null 2>&1
     truncate -s 0 /var/log/syslog > /dev/null 2>&1
     truncate -s 0 /var/log/syslog.1 > /dev/null 2>&1
@@ -155,7 +154,6 @@ manage_targets() {
     echo -e "${BOLD}${PURPLE}                 SELECT REMOTE IP ADDRESS${NC}"
     echo -e "${YELLOW}=========================================================${NC}"
     
-    # خواندن آی‌پی‌ها بدون تغییر در ترتیب (بدون sort)
     mapfile -t saved_ips < <(head -n 3 "$IP_DB")
     
     for i in {0..2}; do
@@ -179,7 +177,6 @@ manage_targets() {
             if [[ -z "$FINAL_REMOTE_IP" ]]; then
                 read -p " Enter IP for slot $ip_choice: " NEW_IP
                 echo -e "${YELLOW}>> IP Entered: $NEW_IP${NC}"
-                # جایگذاری در خط دقیق بدون به هم ریختن ترتیب
                 if [ $(wc -l < "$IP_DB") -lt $ip_choice ]; then
                     while [ $(wc -l < "$IP_DB") -lt $ip_choice ]; do echo "" >> "$IP_DB"; done
                 fi
@@ -191,7 +188,6 @@ manage_targets() {
             read -p " Enter new IP: " FINAL_REMOTE_IP
             echo -e "${YELLOW}>> IP Entered: $FINAL_REMOTE_IP${NC}"
             echo "$FINAL_REMOTE_IP" >> "$IP_DB"
-            # حذف تکراری‌ها بدون مرتب‌سازی الفبایی
             awk '!seen[$0]++' "$IP_DB" > "${IP_DB}.tmp" && mv "${IP_DB}.tmp" "$IP_DB"
             ;;
         *) return 1 ;;
@@ -253,7 +249,6 @@ deploy_tunnel() {
         echo -e "   Current Target: ${GREEN}$FINAL_REMOTE_IP${NC} Ports: ${GREEN}$FINAL_PORTS${NC}"
         read -p "   Use these settings? [Y/n]: " use_saved
         echo -e "${YELLOW}>> Selected: ${use_saved:-Y}${NC}"
-        # اگر ورودی خالی بود یا n نبود (یعنی y یا اینتر)، از تنظیمات ذخیره شده استفاده کن
         if [[ "$use_saved" == "n" ]]; then
             manage_targets || return
         fi
@@ -307,16 +302,15 @@ deploy_tunnel() {
     echo -e "${YELLOW}>> Selected: ${ou:-Y}${NC}"
     read -p "   Enable Memory Opt (GC=20)? [Y/n]: " og
     echo -e "${YELLOW}>> Selected: ${og:-Y}${NC}"
-    read -p "   Enable Anti-DPI Refresh (30m)? [Y/n]: " or
+    read -p "   Enable Anti-DPI Refresh (2h)? [Y/n]: " or
     echo -e "${YELLOW}>> Selected: ${or:-Y}${NC}"
 
-    # در اینجا اگر کاربر n نزند، تمام گزینه‌ها فعال در نظر گرفته می‌شوند
     [[ "$ok" != "n" ]] && Q_K="&keepalive=true" || Q_K=""
     [[ "$om" != "n" ]] && Q_M="&mptcp=true" || Q_M=""
     [[ "$on" != "n" ]] && Q_N="&nodelay=true" || Q_N=""
     [[ "$ou" != "n" ]] && Q_U="&ttl=60s" || Q_U=""
     [[ "$og" != "n" ]] && M_GC="GOGC=20" || M_GC="GOGC=100"
-    [[ "$or" != "n" ]] && R_TIME="1800" || R_TIME="0"
+    [[ "$or" != "n" ]] && R_TIME="7200" || R_TIME="0"
 
     QUERY="?${Q_K}${Q_M}${Q_N}${Q_U}"
     QUERY="${QUERY/\?&/\?}"
@@ -342,7 +336,6 @@ After=network.target
 [Service]
 Type=simple
 Environment=$M_GC
-# Silence logging to prevent disk full
 StandardOutput=null
 StandardError=null
 Restart=always
@@ -357,14 +350,12 @@ EOF
 
     systemctl daemon-reload && systemctl restart "$SERVICE_NAME" && systemctl enable "$SERVICE_NAME"
     
-    # --- CONFIGURATION LOG (NEW SECTION) ---
     banner
     echo -e "${BOLD}${GREEN}[✔] PIR GOST INSTANCE '$T_NAME' DEPLOYED!${NC}"
     echo -e "${BOLD}${WHITE}╔══════════════════════════════════════════════════════════════════════╗${NC}"
     echo -e "${BOLD}${WHITE}║                     DEPLOYMENT CONFIGURATION LOG                     ║${NC}"
     echo -e "${BOLD}${WHITE}╠══════════════════════════════════════════════════════════════════════╣${NC}"
     
-    # Basic Info
     role_str=$([[ "$side_opt" == "1" ]] && echo "IRAN (Client)" || echo "KHAREJ (Server)")
     printf "${BOLD}${WHITE}║ ${CYAN}%-25s${NC} : ${YELLOW}%-40s${NC} ${BOLD}${WHITE}║${NC}\n" "Instance Name" "$T_NAME"
     printf "${BOLD}${WHITE}║ ${CYAN}%-25s${NC} : ${YELLOW}%-40s${NC} ${BOLD}${WHITE}║${NC}\n" "Server Role" "$role_str"
@@ -374,7 +365,6 @@ EOF
     
     echo -e "${BOLD}${WHITE}╠══════════════════════════════════════════════════════════════════════╣${NC}"
     
-    # Feature Status (Toggles)
     show_status() {
         if [[ "$1" != "n" ]]; then echo -e "${GREEN}ENABLED ${NC}"; else echo -e "${RED}DISABLED${NC}"; fi
     }
@@ -384,7 +374,7 @@ EOF
     printf "${BOLD}${WHITE}║ ${WHITE}%-25s${NC} : %-50b ${BOLD}${WHITE}║${NC}\n" "TCP Nodelay" "$(show_status $on)"
     printf "${BOLD}${WHITE}║ ${WHITE}%-25s${NC} : %-50b ${BOLD}${WHITE}║${NC}\n" "UDP TTL (Gaming Fix)" "$(show_status $ou)"
     printf "${BOLD}${WHITE}║ ${WHITE}%-25s${NC} : %-50b ${BOLD}${WHITE}║${NC}\n" "Memory Optimization" "$(show_status $og)"
-    printf "${BOLD}${WHITE}║ ${WHITE}%-25s${NC} : %-50b ${BOLD}${WHITE}║${NC}\n" "Anti-DPI Refresh" "$(show_status $or)"
+    printf "${BOLD}${WHITE}║ ${WHITE}%-25s${NC} : %-50b ${BOLD}${WHITE}║${NC}\n" "Anti-DPI Refresh (2h)" "$(show_status $or)"
     
     echo -e "${BOLD}${WHITE}╚══════════════════════════════════════════════════════════════════════╝${NC}"
     
