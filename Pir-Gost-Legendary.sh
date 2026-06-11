@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # ==========================================
-#         PIR GOST - MASTER EDITION (v5.8)
+#         PIR GOST - MASTER EDITION (v5.8.1)
 # ==========================================
 
 # Check if running as root
@@ -13,15 +13,12 @@ fi
 # Detect Server Public IP (Priority: Interface eth0 for local IP)
 get_ip() {
     local ip
-    # ابتدا تلاش برای خواندن آی‌پی مستقیم از کارت شبکه eth0 (مطابق نیاز شما)
     ip=$(ip -4 addr show eth0 2>/dev/null | grep -oP '(?<=inet\s)\d+(\.\d+){3}' | head -n1)
     
-    # اگر روی eth0 نبود، اولین آی‌پی شبکه سیستم را می‌گیرد
     if [[ -z "$ip" ]]; then
         ip=$(hostname -I | awk '{print $1}')
     fi
     
-    # اگر هیچ آی‌پی داخلی یافت نشد، از سرویس‌های خارجی می‌پرسد
     if [[ -z "$ip" || "$ip" == "127.0.0.1" ]]; then
         ip=$(timeout 2s curl -s -4 api.ipify.org || timeout 2s curl -s -4 icanhazip.com)
     fi
@@ -66,15 +63,12 @@ banner() {
 "+====================+"
     )
 
-    # خط بالا
     printf "${CYAN}╔"
     printf '═%.0s' $(seq 1 $INNER_WIDTH)
     printf "╗${NC}\n"
 
-    # چاپ لوگو به صورت وسط‌چین
     for line in "${logo[@]}"; do
         pad=$(( (INNER_WIDTH - ${#line}) / 2 ))
-
         printf "${CYAN}║${NC}"
         printf "%*s" "$pad" ""
         printf "${BOLD}${PURPLE}%s${NC}" "$line"
@@ -82,12 +76,10 @@ banner() {
         printf "${CYAN}║${NC}\n"
     done
 
-    # جداکننده
     printf "${CYAN}╠"
     printf '═%.0s' $(seq 1 $INNER_WIDTH)
     printf "╣${NC}\n"
 
-    # SERVER IP
     ip_line="SERVER IP: $SERVER_IP"
     pad=$(( (INNER_WIDTH - ${#ip_line}) / 2 ))
 
@@ -97,7 +89,6 @@ banner() {
     printf "%*s" "$((INNER_WIDTH - pad - ${#ip_line}))" ""
     printf "${CYAN}║${NC}\n"
 
-    # خط پایین
     printf "${CYAN}╚"
     printf '═%.0s' $(seq 1 $INNER_WIDTH)
     printf "╝${NC}\n"
@@ -131,8 +122,7 @@ EOF
         echo -e "${GREEN}[+] Optimization already exists.${NC}"
     fi
 
-    # --- LOG MANAGEMENT TO PREVENT DISK FULL ---
-    echo -e "${YELLOW}[*] Configuring log rotation to save disk space...${NC}"
+    echo -e "${YELLOW}[*] Configuring log rotation...${NC}"
     if [ -f /etc/systemd/journald.conf ]; then
         sed -i 's/#SystemMaxUse=/SystemMaxUse=100M/' /etc/systemd/journald.conf
         sed -i 's/#RuntimeMaxUse=/RuntimeMaxUse=100M/' /etc/systemd/journald.conf
@@ -140,8 +130,7 @@ EOF
     fi
     journalctl --vacuum-size=100M > /dev/null 2>&1
     truncate -s 0 /var/log/syslog > /dev/null 2>&1
-    truncate -s 0 /var/log/syslog.1 > /dev/null 2>&1
-    echo -e "${GREEN}[+] Log management applied (Max 100MB).${NC}"
+    echo -e "${GREEN}[+] Log management applied.${NC}"
 }
 
 # --- IP & PORT MANAGER ---
@@ -249,7 +238,7 @@ deploy_tunnel() {
         echo -e "   Current Target: ${GREEN}$FINAL_REMOTE_IP${NC} Ports: ${GREEN}$FINAL_PORTS${NC}"
         read -p "   Use these settings? [Y/n]: " use_saved
         echo -e "${YELLOW}>> Selected: ${use_saved:-Y}${NC}"
-        if [[ "$use_saved" == "n" ]]; then
+        if [[ "$use_saved" == "n" || "$use_saved" == "N" ]]; then
             manage_targets || return
         fi
     else
@@ -302,15 +291,27 @@ deploy_tunnel() {
     echo -e "${YELLOW}>> Selected: ${ou:-Y}${NC}"
     read -p "   Enable Memory Opt (GC=20)? [Y/n]: " og
     echo -e "${YELLOW}>> Selected: ${og:-Y}${NC}"
-    read -p "   Enable Anti-DPI Refresh (2h)? [Y/n]: " or
-    echo -e "${YELLOW}>> Selected: ${or:-Y}${NC}"
+    
+    # --- CHANGED: FPI (Anti-DPI) Refresh Interval ---
+    echo -e "   ${CYAN}Anti-DPI Refresh Interval (minutes)${NC}"
+    read -p "   [Default: 300 (5h), Enter 0 to disable]: " REFRESH_MIN
+    
+    if [[ -z "$REFRESH_MIN" ]]; then
+        REFRESH_MIN=300
+    fi
+    echo -e "${YELLOW}>> Selected: ${REFRESH_MIN} minutes${NC}"
+    
+    if [[ "$REFRESH_MIN" -eq 0 ]]; then
+        R_TIME="0"
+    else
+        R_TIME=$((REFRESH_MIN * 60))
+    fi
 
-    [[ "$ok" != "n" ]] && Q_K="&keepalive=true" || Q_K=""
-    [[ "$om" != "n" ]] && Q_M="&mptcp=true" || Q_M=""
-    [[ "$on" != "n" ]] && Q_N="&nodelay=true" || Q_N=""
-    [[ "$ou" != "n" ]] && Q_U="&ttl=60s" || Q_U=""
-    [[ "$og" != "n" ]] && M_GC="GOGC=20" || M_GC="GOGC=100"
-    [[ "$or" != "n" ]] && R_TIME="7200" || R_TIME="0"
+    [[ "$ok" != "n" && "$ok" != "N" ]] && Q_K="&keepalive=true" || Q_K=""
+    [[ "$om" != "n" && "$om" != "N" ]] && Q_M="&mptcp=true" || Q_M=""
+    [[ "$on" != "n" && "$on" != "N" ]] && Q_N="&nodelay=true" || Q_N=""
+    [[ "$ou" != "n" && "$ou" != "N" ]] && Q_U="&ttl=60s" || Q_U=""
+    [[ "$og" != "n" && "$og" != "N" ]] && M_GC="GOGC=20" || M_GC="GOGC=100"
 
     QUERY="?${Q_K}${Q_M}${Q_N}${Q_U}"
     QUERY="${QUERY/\?&/\?}"
@@ -366,7 +367,7 @@ EOF
     echo -e "${BOLD}${WHITE}╠══════════════════════════════════════════════════════════════════════╣${NC}"
     
     show_status() {
-        if [[ "$1" != "n" ]]; then echo -e "${GREEN}ENABLED ${NC}"; else echo -e "${RED}DISABLED${NC}"; fi
+        if [[ "$1" != "n" && "$1" != "N" ]]; then echo -e "${GREEN}ENABLED ${NC}"; else echo -e "${RED}DISABLED${NC}"; fi
     }
     
     printf "${BOLD}${WHITE}║ ${WHITE}%-25s${NC} : %-50b ${BOLD}${WHITE}║${NC}\n" "TCP Keepalive" "$(show_status $ok)"
@@ -374,7 +375,9 @@ EOF
     printf "${BOLD}${WHITE}║ ${WHITE}%-25s${NC} : %-50b ${BOLD}${WHITE}║${NC}\n" "TCP Nodelay" "$(show_status $on)"
     printf "${BOLD}${WHITE}║ ${WHITE}%-25s${NC} : %-50b ${BOLD}${WHITE}║${NC}\n" "UDP TTL (Gaming Fix)" "$(show_status $ou)"
     printf "${BOLD}${WHITE}║ ${WHITE}%-25s${NC} : %-50b ${BOLD}${WHITE}║${NC}\n" "Memory Optimization" "$(show_status $og)"
-    printf "${BOLD}${WHITE}║ ${WHITE}%-25s${NC} : %-50b ${BOLD}${WHITE}║${NC}\n" "Anti-DPI Refresh (2h)" "$(show_status $or)"
+    
+    fpi_status=$([[ "$R_TIME" == "0" ]] && echo -e "${RED}DISABLED${NC}" || echo -e "${GREEN}${REFRESH_MIN} Minutes${NC}")
+    printf "${BOLD}${WHITE}║ ${WHITE}%-25s${NC} : %-50b ${BOLD}${WHITE}║${NC}\n" "Anti-DPI Refresh (FPI)" "$fpi_status"
     
     echo -e "${BOLD}${WHITE}╚══════════════════════════════════════════════════════════════════════╝${NC}"
     
@@ -491,7 +494,7 @@ uninstall_pir() {
         2) 
            read -p "   Are you sure? (y/n): " confirm
            echo -e "${YELLOW}>> Choice: ${confirm:-n}${NC}"
-           if [[ "$confirm" == "y" ]]; then
+           if [[ "$confirm" == "y" || "$confirm" == "Y" ]]; then
                pkill -9 gost
                rm -f /etc/systemd/system/gost-*.service
                rm -f "$GOST_BIN"
